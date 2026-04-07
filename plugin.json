@@ -1,0 +1,11 @@
+{
+  "id": "midi_amp",
+  "name": "MIDI Amp Control",
+  "version": "1.0.0",
+  "private": false,
+  "nav": { "label": "MIDI", "screen": "midi-amp" },
+  "screen": "screen.html",
+  "script": "screen.js",
+  "settings": { "html": "settings.html" },
+  "routes": "routes.py"
+}

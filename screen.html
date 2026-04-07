@@ -1,0 +1,42 @@
+<div class="max-w-4xl mx-auto px-6 pt-24 pb-16">
+    <button onclick="showScreen('home')" class="text-gray-500 hover:text-white text-sm mb-6 flex items-center gap-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg> Back
+    </button>
+    <h2 class="text-3xl font-bold text-white mb-2">MIDI Amp Control</h2>
+    <p class="text-gray-500 mb-8">Auto-switch presets on your amp/modeler when song tones change during playback.</p>
+
+    <!-- MIDI device status -->
+    <div id="midi-status" class="mb-6"></div>
+
+    <!-- Search song to map -->
+    <div class="flex gap-3 mb-6">
+        <input type="text" id="midi-search" placeholder="Search a song to configure mappings..." onkeydown="if(event.key==='Enter')midiSearchSongs()"
+            class="flex-1 bg-dark-700 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-gray-300 placeholder-gray-600 focus:border-accent/50 outline-none">
+        <button onclick="midiSearchSongs()" class="bg-dark-600 hover:bg-dark-500 px-5 py-2.5 rounded-xl text-sm text-gray-300 transition">Search</button>
+    </div>
+    <div id="midi-search-results" class="space-y-2 mb-8"></div>
+
+    <!-- Mapping editor -->
+    <div id="midi-editor" class="hidden">
+        <h3 class="text-lg font-semibold text-white mb-4" id="midi-editor-title"></h3>
+        <div id="midi-mappings" class="space-y-3"></div>
+    </div>
+
+    <!-- Test area -->
+    <div id="midi-test" class="mt-8 hidden">
+        <h3 class="text-sm font-semibold text-gray-300 mb-3">Test MIDI Output</h3>
+        <div class="flex gap-3 items-center flex-wrap">
+            <select id="midi-test-type" class="bg-dark-700 border border-gray-700 rounded-lg px-2 py-1 text-xs text-gray-300 outline-none">
+                <option value="cc">CC</option>
+                <option value="pc">PC</option>
+            </select>
+            <label class="text-xs text-gray-500">Ch</label>
+            <input type="number" id="midi-test-ch" min="0" max="15" value="0" class="w-14 bg-dark-700 border border-gray-700 rounded-lg px-2 py-1 text-xs text-gray-300 outline-none">
+            <label class="text-xs text-gray-500">CC#</label>
+            <input type="number" id="midi-test-cc" min="0" max="127" value="0" class="w-14 bg-dark-700 border border-gray-700 rounded-lg px-2 py-1 text-xs text-gray-300 outline-none">
+            <label class="text-xs text-gray-500">Value</label>
+            <input type="number" id="midi-test-val" min="0" max="127" value="1" class="w-14 bg-dark-700 border border-gray-700 rounded-lg px-2 py-1 text-xs text-gray-300 outline-none">
+            <button onclick="midiTestSend()" class="px-4 py-1.5 bg-accent hover:bg-accent-light rounded-lg text-xs text-white transition">Send</button>
+        </div>
+    </div>
+</div>
