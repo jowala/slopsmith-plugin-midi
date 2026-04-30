@@ -89,7 +89,7 @@ def setup(app, context):
         # stripped-down format with stems + arrangement JSON only. Return
         # an empty list rather than feeding a non-PSARC into the PSARC
         # parser (which 500s on the magic-byte check).
-        if filename.lower().endswith(".sloppak") or psarc_path.is_dir():
+        if psarc_path.name.lower().endswith(".sloppak"):
             return {"tones": []}
 
         files = read_psarc_entries(str(psarc_path), ["*.json"])
