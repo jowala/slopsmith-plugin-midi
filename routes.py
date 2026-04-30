@@ -81,11 +81,29 @@ def setup(app, context):
         if not dlc:
             return {"error": "DLC folder not configured"}
 
-        psarc_path = dlc / filename
+        dlc_path = dlc.resolve()
+        psarc_path = (dlc_path / filename).resolve()
+        try:
+            psarc_path.relative_to(dlc_path)
+        except ValueError:
+            return {"error": "Invalid path"}
+
         if not psarc_path.exists():
             return {"error": "File not found"}
 
-        files = read_psarc_entries(str(psarc_path), ["*.json"])
+        # Sloppaks don't carry RS-format tone manifests — they're a
+        # stripped-down format with stems + arrangement JSON only. Return
+        # an empty list rather than feeding a non-PSARC into the PSARC
+        # parser (which 500s on the magic-byte check).
+        if psarc_path.name.lower().endswith(".sloppak"):
+            return {"tones": []}
+
+        try:
+            files = read_psarc_entries(str(psarc_path), ["*.json"])
+        except (ValueError, OSError) as exc:
+            import logging
+            logging.getLogger(__name__).warning("Failed to read PSARC %s: %s", psarc_path, exc)
+            return {"tones": [], "error": "Unsupported or invalid archive"}
         tones = []
         seen = set()
 
