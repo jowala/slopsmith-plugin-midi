@@ -81,7 +81,10 @@ def setup(app, context):
         if not dlc:
             return {"error": "DLC folder not configured"}
 
-        psarc_path = dlc / filename
+        psarc_path = (dlc / filename).resolve()
+        if not str(psarc_path).startswith(str(dlc.resolve())):
+            return {"error": "Invalid path"}
+
         if not psarc_path.exists():
             return {"error": "File not found"}
 
@@ -92,7 +95,10 @@ def setup(app, context):
         if psarc_path.name.lower().endswith(".sloppak"):
             return {"tones": []}
 
-        files = read_psarc_entries(str(psarc_path), ["*.json"])
+        try:
+            files = read_psarc_entries(str(psarc_path), ["*.json"])
+        except Exception:
+            return {"tones": [], "error": "Unsupported or invalid archive"}
         tones = []
         seen = set()
 
