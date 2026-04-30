@@ -81,8 +81,11 @@ def setup(app, context):
         if not dlc:
             return {"error": "DLC folder not configured"}
 
-        psarc_path = (dlc / filename).resolve()
-        if not str(psarc_path).startswith(str(dlc.resolve())):
+        dlc_path = dlc.resolve()
+        psarc_path = (dlc_path / filename).resolve()
+        try:
+            psarc_path.relative_to(dlc_path)
+        except ValueError:
             return {"error": "Invalid path"}
 
         if not psarc_path.exists():
@@ -97,7 +100,9 @@ def setup(app, context):
 
         try:
             files = read_psarc_entries(str(psarc_path), ["*.json"])
-        except Exception:
+        except (ValueError, OSError) as exc:
+            import logging
+            logging.getLogger(__name__).warning("Failed to read PSARC %s: %s", psarc_path, exc)
             return {"tones": [], "error": "Unsupported or invalid archive"}
         tones = []
         seen = set()
