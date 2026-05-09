@@ -273,16 +273,32 @@ function _midiCheckToneChange() {
     }
 }
 
-// Poll for tone changes during playback
-setInterval(_midiCheckToneChange, 100);
-
-// Hook into playSong
+// Side effects: tone-change poller + playSong wrapper. Consolidated under
+// one idempotency guard with the showScreen wrapper below so re-evaluation
+// (loader cache miss, hot reload, older core builds without the load-side
+// guard) doesn't start a second 10Hz poller and doesn't grow the wrapper
+// chains.
 (function() {
+    const HOOK_KEY = '__slopsmithMidiHooksInstalled';
+    if (window[HOOK_KEY]) return;
+    window[HOOK_KEY] = true;
+
+    // Poll for tone changes during playback
+    setInterval(_midiCheckToneChange, 100);
+
+    // Hook into playSong
     const origPlaySong = window.playSong;
     window.playSong = async function(filename, arrangement) {
         await origPlaySong(filename, arrangement);
         _midiInjectButton();
         _midiLoadMappings(filename);
+    };
+
+    // Init on screen show (wrapped here so the same guard covers it).
+    const origShowScreen = window.showScreen;
+    window.showScreen = function(id) {
+        origShowScreen(id);
+        if (id === 'plugin-midi_amp') midiInit();
     };
 })();
 
@@ -306,11 +322,3 @@ function _midiInjectButton() {
     controls.insertBefore(btn, closeBtn);
 }
 
-// Init on screen show
-(function() {
-    const origShowScreen = window.showScreen;
-    window.showScreen = function(id) {
-        origShowScreen(id);
-        if (id === 'plugin-midi_amp') midiInit();
-    };
-})();
