@@ -12,10 +12,20 @@ _lock = threading.Lock()
 
 def _get_conn():
     global _conn
-    if _conn is None:
-        _conn = sqlite3.connect(_db_path, check_same_thread=False)
-        _conn.execute("PRAGMA journal_mode=WAL")
-        _conn.execute("""
+    if _conn is not None:
+        return _conn
+    # Double-checked locking: open + migrate against a local
+    # variable, publish to the global only after migration commits.
+    # Without this, a second request can observe a half-initialized
+    # _conn (assigned but pre-migration) and SELECT against the
+    # un-migrated v1.0.0 schema, raising
+    # `no such column: bank_number`.
+    with _lock:
+        if _conn is not None:
+            return _conn
+        conn = sqlite3.connect(_db_path, check_same_thread=False)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS midi_mappings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 filename TEXT NOT NULL,
@@ -31,9 +41,10 @@ def _get_conn():
                 UNIQUE(filename, tone_key)
             )
         """)
-        _migrate_schema(_conn)
-        _conn.commit()
-    return _conn
+        _migrate_schema(conn)
+        conn.commit()
+        _conn = conn
+        return _conn
 
 
 def _migrate_schema(conn):
