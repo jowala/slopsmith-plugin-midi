@@ -77,13 +77,21 @@ function midiSelectDevice(id) {
     localStorage.setItem('midi_output_id', id);
 }
 
+// Range validators. Bit-masking out-of-range values would silently
+// wrap them onto a different MIDI byte — e.g. bank 16384 → 0/0,
+// CC#128 → CC#0 (Bank Select MSB) — and clobber the user's bank.
+// Better to drop the message than to send a wrong one.
+function _isCcNum(n)       { return Number.isInteger(n) && n >= 0 && n <= 127; }
+function _is7Bit(n)        { return Number.isInteger(n) && n >= 0 && n <= 127; }
+function _is14BitBank(n)   { return Number.isInteger(n) && n >= 0 && n <= 16383; }
+
 function midiSend(channel, msgType, ccNumber, value, opts) {
     if (!_midiOutput) return;
     const ch = channel & 0x0F;
-    const bankNumber = (opts && Number.isFinite(opts.bankNumber)) ? opts.bankNumber : 0;
-    const cc2Number = (opts && opts.cc2Number != null && Number.isFinite(opts.cc2Number))
+    const bankNumberRaw = (opts && Number.isFinite(opts.bankNumber)) ? opts.bankNumber : 0;
+    const cc2NumberRaw  = (opts && opts.cc2Number != null && Number.isFinite(opts.cc2Number))
         ? opts.cc2Number : null;
-    const cc2Value = (opts && Number.isFinite(opts.cc2Value)) ? opts.cc2Value : 0;
+    const cc2ValueRaw   = (opts && Number.isFinite(opts.cc2Value)) ? opts.cc2Value : 0;
     if (msgType === 'cc') {
         // Control Change
         _midiOutput.send([0xB0 | ch, ccNumber & 0x7F, value & 0x7F]);
@@ -93,20 +101,29 @@ function midiSend(channel, msgType, ccNumber, value, opts) {
         // (CC#0 = Bank MSB, CC#32 = Bank LSB). Only sent when
         // bankNumber > 0 so users who don't bank-switch don't
         // get a phantom Bank 0/0 on every preset change.
-        if (bankNumber > 0) {
-            const msb = (bankNumber >> 7) & 0x7F;
-            const lsb = bankNumber & 0x7F;
-            _midiOutput.send([0xB0 | ch, 0x00, msb]);
-            _midiOutput.send([0xB0 | ch, 0x20, lsb]);
+        if (bankNumberRaw > 0) {
+            if (_is14BitBank(bankNumberRaw)) {
+                const msb = (bankNumberRaw >> 7) & 0x7F;
+                const lsb = bankNumberRaw & 0x7F;
+                _midiOutput.send([0xB0 | ch, 0x00, msb]);
+                _midiOutput.send([0xB0 | ch, 0x20, lsb]);
+            } else {
+                console.warn(`[MIDI] Bank ${bankNumberRaw} out of range 0-16383; skipping Bank Select`);
+            }
         }
         _midiOutput.send([0xC0 | ch, value & 0x7F]);
-        console.log(`[MIDI] Ch${ch} PC ${value}${bankNumber > 0 ? ` (Bank ${bankNumber})` : ''}`);
+        console.log(`[MIDI] Ch${ch} PC ${value}${bankNumberRaw > 0 ? ` (Bank ${bankNumberRaw})` : ''}`);
     }
     // Optional second CC fired regardless of msgType — useful for
-    // tone-shape macros tied to the same tone change.
-    if (cc2Number !== null) {
-        _midiOutput.send([0xB0 | ch, cc2Number & 0x7F, cc2Value & 0x7F]);
-        console.log(`[MIDI] Ch${ch} CC2#${cc2Number} = ${cc2Value}`);
+    // tone-shape macros tied to the same tone change. Skip rather
+    // than wrap when the CC# or value is out of the 0-127 range.
+    if (cc2NumberRaw !== null) {
+        if (_isCcNum(cc2NumberRaw) && _is7Bit(cc2ValueRaw)) {
+            _midiOutput.send([0xB0 | ch, cc2NumberRaw, cc2ValueRaw]);
+            console.log(`[MIDI] Ch${ch} CC2#${cc2NumberRaw} = ${cc2ValueRaw}`);
+        } else {
+            console.warn(`[MIDI] CC2 ${cc2NumberRaw}=${cc2ValueRaw} out of range 0-127; skipping`);
+        }
     }
 }
 
