@@ -399,7 +399,7 @@ function _midiCheckToneChange() {
 
 function _midiInjectButton() {
     // v3: mount into the host's stable plugin-control slot (Plugins rail
-    // popover). The legacy `button:last-child` anchor resolves to a NESTED
+    // popover). The legacy DOM-injection anchor resolves to a NESTED
     // transport button in v3 and would throw on insertBefore; the slot is
     // always present in v3, so that anchor is only used in the classic UI.
     const isV3 = !!(window.slopsmith && window.slopsmith.uiVersion === 'v3');
@@ -411,7 +411,7 @@ function _midiInjectButton() {
     const controls = slot || document.getElementById('player-controls');
     if (!controls || document.getElementById('btn-midi')) return;
 
-    const closeBtn = isV3 ? null : controls.querySelector('button:last-child');
+    const closeBtn = isV3 ? null : controls.querySelector(':scope > button:last-of-type');
     const btn = document.createElement('button');
     btn.id = 'btn-midi';
     btn.className = 'px-3 py-1.5 bg-dark-600 hover:bg-dark-500 rounded-lg text-xs text-gray-400 transition';
