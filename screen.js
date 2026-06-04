@@ -398,10 +398,20 @@ function _midiCheckToneChange() {
 })();
 
 function _midiInjectButton() {
-    const controls = document.getElementById('player-controls');
+    // v3: mount into the host's stable plugin-control slot (Plugins rail
+    // popover). The legacy `button:last-child` anchor resolves to a NESTED
+    // transport button in v3 and would throw on insertBefore; the slot is
+    // always present in v3, so that anchor is only used in the classic UI.
+    const isV3 = !!(window.slopsmith && window.slopsmith.uiVersion === 'v3');
+    let slot = null;
+    if (isV3 && window.slopsmith.ui && typeof window.slopsmith.ui.playerControlSlot === 'function') {
+        try { const _s = window.slopsmith.ui.playerControlSlot(); if (_s instanceof Element) slot = _s; }
+        catch (_e) { /* host slot API failure → fall back to legacy container */ }
+    }
+    const controls = slot || document.getElementById('player-controls');
     if (!controls || document.getElementById('btn-midi')) return;
 
-    const closeBtn = controls.querySelector('button:last-child');
+    const closeBtn = isV3 ? null : controls.querySelector('button:last-child');
     const btn = document.createElement('button');
     btn.id = 'btn-midi';
     btn.className = 'px-3 py-1.5 bg-dark-600 hover:bg-dark-500 rounded-lg text-xs text-gray-400 transition';
@@ -414,6 +424,7 @@ function _midiInjectButton() {
         showScreen('plugin-midi_amp');
         midiEditSong(encodeURIComponent(filename), `${title} - ${artist}`);
     };
-    controls.insertBefore(btn, closeBtn);
+    if (closeBtn) controls.insertBefore(btn, closeBtn);
+    else controls.appendChild(btn);
 }
 
