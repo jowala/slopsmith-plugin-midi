@@ -114,8 +114,8 @@ function midiSend(channel, msgType, ccNumber, value, opts) {
             // get a phantom Bank 0/0 on every preset change.
             if (bankNumberRaw > 0) {
                 if (_is14BitBank(bankNumberRaw)) {
-                    const msb = (bankNumberRaw >> 7) & 0x7F;
-                    const lsb = bankNumberRaw & 0x7F;
+                    const lsb = (bankNumberRaw >> 7) & 0x7F;
+                    const msb = bankNumberRaw & 0x7F;
                     _midiOutput.send([0xB0 | ch, 0x00, msb]);
                     _midiOutput.send([0xB0 | ch, 0x20, lsb]);
                 } else {
