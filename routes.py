@@ -34,7 +34,8 @@ def _get_conn():
                 midi_channel INTEGER DEFAULT 0,
                 msg_type TEXT DEFAULT 'cc',
                 cc_number INTEGER DEFAULT 0,
-                bank_number INTEGER DEFAULT 0,
+                bank_msb INTEGER DEFAULT 0,
+                bank_lsb INTEGER DEFAULT 0,
                 value INTEGER DEFAULT 0,
                 cc2_number INTEGER,
                 cc2_value INTEGER DEFAULT 0,
@@ -52,13 +53,20 @@ def _migrate_schema(conn):
 
     CREATE TABLE IF NOT EXISTS is a no-op when the table already
     exists, so installs that ran any pre-1.1.0 version still have
-    the original 7-column schema. Without this, the very first
-    GET /mappings request after upgrade 500s with
-    `no such column: bank_number`.
+    the original 7-column schema. Without this, missing or renamed
+    columns will cause queries to fail.
     """
     existing = {row[1] for row in conn.execute("PRAGMA table_info(midi_mappings)")}
+
+    # Rename bank_number to bank_msb if upgrading from previous version
+    if "bank_number" in existing and "bank_msb" not in existing:
+        conn.execute("ALTER TABLE midi_mappings RENAME COLUMN bank_number TO bank_msb")
+        existing.remove("bank_number")
+        existing.add("bank_msb")
+
     additions = (
-        ("bank_number", "INTEGER DEFAULT 0"),
+        ("bank_msb", "INTEGER DEFAULT 0"),
+        ("bank_lsb", "INTEGER DEFAULT 0"),
         ("cc2_number", "INTEGER"),
         ("cc2_value", "INTEGER DEFAULT 0"),
     )
@@ -76,15 +84,15 @@ def setup(app, context):
         conn = _get_conn()
         rows = conn.execute(
             "SELECT id, tone_key, tone_name, midi_channel, msg_type, "
-            "cc_number, bank_number, value, cc2_number, cc2_value "
+            "cc_number, bank_msb, bank_lsb, value, cc2_number, cc2_value "
             "FROM midi_mappings WHERE filename = ? ORDER BY tone_key",
             (filename,)
         ).fetchall()
         return [
             {"id": r[0], "tone_key": r[1], "tone_name": r[2],
              "channel": r[3], "msg_type": r[4],
-             "cc_number": r[5], "bank_number": r[6], "value": r[7],
-             "cc2_number": r[8], "cc2_value": r[9]}
+             "cc_number": r[5], "bank_msb": r[6], "bank_lsb": r[7],
+             "value": r[8], "cc2_number": r[9], "cc2_value": r[10]}
             for r in rows
         ]
 
@@ -104,11 +112,11 @@ def setup(app, context):
             conn.execute(
                 "INSERT OR REPLACE INTO midi_mappings "
                 "(filename, tone_key, tone_name, midi_channel, msg_type, "
-                "cc_number, bank_number, value, cc2_number, cc2_value) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "cc_number, bank_msb, bank_lsb, value, cc2_number, cc2_value) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (filename, data.get("tone_key", ""), data.get("tone_name", ""),
                  data.get("channel", 0), data.get("msg_type", "cc"),
-                 data.get("cc_number", 0), data.get("bank_number", 0),
+                 data.get("cc_number", 0), data.get("bank_msb", 0), data.get("bank_lsb", 0),
                  data.get("value", 0), cc2_number, data.get("cc2_value", 0))
             )
             conn.commit()
