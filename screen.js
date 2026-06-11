@@ -140,19 +140,19 @@ function midiSend(channel, msgType, ccNumber, value, msbNumber, lsbNumber, cc2Nu
             _midiOutput.send([0xB0 | ch, 0x00, msbNumberRaw]);  // Bank Select MSB
             console.log(`[MIDI] Ch:${ch} MSB:${msbNumberRaw}`);
         } else {
-            console.warn(`[MIDI] MSB ${msbNumberRaw} out of range 0-16383; skipping MSB`);
+            console.warn(`[MIDI] MSB ${msbNumberRaw} out of range 0-127; skipping MSB`);
         }
         if (_is7Bit(lsbNumberRaw)) {
             _midiOutput.send([0xB0 | ch, 0x20, lsbNumberRaw]);
             console.log(`[MIDI] Ch:${ch} LSB:${lsbNumberRaw}`);
         } else {     
-            console.warn(`[MIDI] PC ${value} out of range 0-127; skipping`);
+            console.warn(`[MIDI] LSB ${value} out of range 0-127; skipping`);
         }
         if (_is7Bit(value)) {
             _midiOutput.send([0xC0 | ch, value]);
             console.log(`[MIDI] Ch${ch} ${value}`);
         } else {
-            console.warn(`[MIDI] ${value}; skipping`);
+            console.warn(`[MIDI] PC ${value} out of range 0-127; skipping`);
         }
     }
     // Optional second CC fired regardless of msgType — useful for
