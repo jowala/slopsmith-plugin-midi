@@ -146,15 +146,19 @@ def setup(app, context):
         if not psarc_path.exists():
             return {"error": "File not found"}
 
-        sloppak_cache = context["get_sloppak_cache_dir"]()
-        if not sloppak_cache:
-            return {"error": "Sloppack cache folder not configured"}
         
         # Load the sloppak song
         if filename.lower().endswith(".sloppak"):
+            sloppak_cache = context["get_sloppak_cache_dir"]()
+            if not sloppak_cache:
+                return {"error": "Sloppack cache folder not configured"}
+        
             from sloppak import load_song
             
-            loaded = load_song(filename, dlc_path, sloppak_cache)
+            try:
++                loaded = load_song(filename, dlc_path, sloppak_cache)
++            except Exception as exc:
++                return {"tones": [], "error": f"Failed to load sloppak: {exc}"}
             
             seen_keys: set[str] = set()
             tones: list[dict] = []

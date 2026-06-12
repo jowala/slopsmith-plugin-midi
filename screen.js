@@ -146,7 +146,7 @@ function midiSend(channel, msgType, ccNumber, value, msbNumber, lsbNumber, cc2Nu
             _midiOutput.send([0xB0 | ch, 0x20, lsbNumberRaw]);
             console.log(`[MIDI] Ch:${ch} LSB:${lsbNumberRaw}`);
         } else {     
-            console.warn(`[MIDI] LSB ${value} out of range 0-127; skipping`);
+            console.warn(`[MIDI] LSB ${lsbNumberRaw} out of range 0-127; skipping`);
         }
         if (_is7Bit(value)) {
             _midiOutput.send([0xC0 | ch, value]);
