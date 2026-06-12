@@ -132,34 +132,62 @@ def setup(app, context):
 
     @app.get("/api/plugins/midi_amp/song-tones/{filename:path}")
     def get_song_tones(filename: str):
-        """Get tone keys from a CDLC for mapping."""
-        from psarc import read_psarc_entries
+        # Get tone keys from a CDLC for mapping
         dlc = context["get_dlc_dir"]()
         if not dlc:
             return {"error": "DLC folder not configured"}
-
+        
         dlc_path = dlc.resolve()
         psarc_path = (dlc_path / filename).resolve()
         try:
             psarc_path.relative_to(dlc_path)
         except ValueError:
             return {"error": "Invalid path"}
-
         if not psarc_path.exists():
             return {"error": "File not found"}
 
-        # Sloppaks don't carry RS-format tone manifests — they're a
-        # stripped-down format with stems + arrangement JSON only. Return
-        # an empty list rather than feeding a non-PSARC into the PSARC
-        # parser (which 500s on the magic-byte check).
-        if psarc_path.name.lower().endswith(".sloppak"):
-            return {"tones": []}
+        sloppak_cache = context["get_sloppak_cache_dir"]()
+        if not sloppak_cache:
+            return {"error": "Sloppack cache folder not configured"}
+        
+        # Load the sloppak song
+        if filename.lower().endswith(".sloppak"):
+            from sloppak import load_song
+            
+            loaded = load_song(filename, dlc_path, sloppak_cache)
+            
+            seen_keys: set[str] = set()
+            tones: list[dict] = []
+    
+            for arr in loaded.song.arrangements:
+                arr_name = getattr(arr, "name", "")
+                if arr_name in ("Vocals", "ShowLights", "JVocals") or not arr.tones or not isinstance(arr.tones, dict):
+                    continue
 
+                definitions = arr.tones.get("definitions", [])
+                if not isinstance(definitions, list):
+                    continue
+            
+                for tone_def in definitions:
+                    if not isinstance(tone_def, dict):
+                        continue
+                
+                    key = tone_def.get("Key", "")
+                    if isinstance(key, str) and key and key not in seen_keys:
+                        seen_keys.add(key)
+                        name = tone_def.get("Name", key)
+                        tones.append({
+                            "key": key,
+                            "name": name,
+                            "arrangement": arr_name
+                        })
+            return {"tones": tones}
+
+        # Not a sloppak so fall back to psarc handling
+        from psarc import read_psarc_entries
         try:
             files = read_psarc_entries(str(psarc_path), ["*.json"])
         except (ValueError, OSError) as exc:
-            import logging
-            logging.getLogger(__name__).warning("Failed to read PSARC %s: %s", psarc_path, exc)
             return {"tones": [], "error": "Unsupported or invalid archive"}
         tones = []
         seen = set()
