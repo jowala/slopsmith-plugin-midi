@@ -156,9 +156,9 @@ def setup(app, context):
             from sloppak import load_song
             
             try:
-+                loaded = load_song(filename, dlc_path, sloppak_cache)
-+            except Exception as exc:
-+                return {"tones": [], "error": f"Failed to load sloppak: {exc}"}
+                loaded = load_song(filename, dlc_path, sloppak_cache)
+            except Exception as exc:
+                return {"tones": [], "error": f"Failed to load sloppak: {exc}"}
             
             seen_keys: set[str] = set()
             tones: list[dict] = []
